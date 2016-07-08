@@ -3,6 +3,8 @@
 require('dotenv').config();
 
 const fs = require('fs');
+const crypto = require ('crypto');
+
 const fileType = require('file-type');
 const AWS = require('aws-sdk');
 
@@ -26,6 +28,18 @@ const mimeType = (data) => {
   },fileType(data));  //this on the right gets pushed into the thing on the left
 };
 
+const randomHexString = (length) =>{
+  return new Promise((resolve, reject) => {
+      crypto.randomBytes(length, (error, buffer) => {
+        if (error) {
+          reject(error);
+        }
+
+        resolve(buffer.toString('hex'));
+      });
+  });
+};
+
 let filename = process.argv[2] || '';
 
 
@@ -42,14 +56,18 @@ const readFile = (filename) => {
 };
 
 const awsUpload = (file) => {
-  const options = {
-    ACL : 'public-read',
-    Body : file.data,
-    Bucket : "matt-wdi-boston-bucket",
-    ContentType :  file.mime,
-    Key : `test/test.${file.ext}`,
+  return randomHexString(16)
+  .then((filename) => {
+    let dir = new Date().toISOString().split('T')[0];
+    return {
+      ACL : 'public-read',
+      Body : file.data,
+      Bucket : "matt-wdi-boston-bucket",
+      ContentType :  file.mime,
+      Key : `${dir}/${filename}.${file.ext}`,
   };
-
+  })
+  .then((options) => {
   return new Promise((resolve, reject) => {
     s3.upload(options, (error, data ) =>  {
       if (error) {
@@ -59,7 +77,7 @@ const awsUpload = (file) => {
         resolve(data);
       });
     });
-    // return Promise.resolve(options);
+  });
 };
 
 readFile(filename)
