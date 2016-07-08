@@ -2,6 +2,8 @@
 
 require('dotenv').config();
 
+const uploader = require('../lib/aws-s3-upload.js')
+
 const fs = require('fs');
 const crypto = require ('crypto');
 
@@ -21,28 +23,55 @@ const s3 = new AWS.S3(
 //so this has the object on the right overwrite the thing on the left.
 //if the filetype on the right is returned, (for instance, if it returns ext: 'png' and mime 'image/png')
 //it will overwrite the default object on the left
-const mimeType = (data) => {
-  return Object.assign({
-    ext: 'bin',
-    mime: 'application/octet-stream',
-  },fileType(data));  //this on the right gets pushed into the thing on the left
-};
+// const mimeType = (data) => {
+//   return Object.assign({
+//     ext: 'bin',
+//     mime: 'application/octet-stream',
+//   },fileType(data));  //this on the right gets pushed into the thing on the left
+// };
+//
+// const randomHexString = (length) =>{
+//   return new Promise((resolve, reject) => {
+//       crypto.randomBytes(length, (error, buffer) => {
+//         if (error) {
+//           reject(error);
+//         }
+//
+//         resolve(buffer.toString('hex'));
+//       });
+//   });
+// };
+//
 
-const randomHexString = (length) =>{
-  return new Promise((resolve, reject) => {
-      crypto.randomBytes(length, (error, buffer) => {
-        if (error) {
-          reject(error);
-        }
-
-        resolve(buffer.toString('hex'));
-      });
-  });
-};
+//
+// const awsUpload = (file) => {
+//   return randomHexString(16)
+//   .then((filename) => {
+//     let dir = new Date().toISOString().split('T')[0];
+//     return {
+//       ACL : 'public-read',
+//       Body : file.data,
+//       Bucket : "matt-wdi-boston-bucket",
+//       ContentType :  file.mime,
+//       Key : `${dir}/${filename}.${file.ext}`,
+//   };
+//   })
+//   .then((options) => {
+//   return new Promise((resolve, reject) => {
+//     s3.upload(options, (error, data ) =>  {
+//       if (error) {
+//           reject(error);
+//         }
+//
+//         resolve(data);
+//       });
+//     });
+//   });
+// };
 
 let filename = process.argv[2] || '';
-
-
+//
+//
 const readFile = (filename) => {
   return new Promise ((resolve, reject) =>{
     fs.readFile(filename, (error, data) =>{
@@ -55,38 +84,10 @@ const readFile = (filename) => {
   });
 };
 
-const awsUpload = (file) => {
-  return randomHexString(16)
-  .then((filename) => {
-    let dir = new Date().toISOString().split('T')[0];
-    return {
-      ACL : 'public-read',
-      Body : file.data,
-      Bucket : "matt-wdi-boston-bucket",
-      ContentType :  file.mime,
-      Key : `${dir}/${filename}.${file.ext}`,
-  };
-  })
-  .then((options) => {
-  return new Promise((resolve, reject) => {
-    s3.upload(options, (error, data ) =>  {
-      if (error) {
-          reject(error);
-        }
-
-        resolve(data);
-      });
-    });
-  });
-};
 
 readFile(filename)
-.then((data) => {
-  let file = mimeType(data);
-  file.data = data;
-  return file;
-})
-.then(awsUpload)
+.then(uploader.prepareFile)
+.then(uploader.awsUpload)
 // .then((data) => console.log(`${filename} is ${data.length} bytes long`))
 .then(console.log) //this console logs wahtever the last .then returned
 .catch(console.error);
