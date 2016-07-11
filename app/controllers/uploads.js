@@ -6,6 +6,8 @@ const multer = require('app/middleware').multer;
 const models = require('app/models');
 const Upload = models.upload;
 
+const uploader = require('lib/aws-s3-upload');
+
 // const authenticate = require('./concerns/authenticate');
 
 const index = (req, res, next) => {
@@ -21,15 +23,21 @@ const show = (req, res, next) => {
 };
 
 const create = (req, res, next) => {
-  let upload = {
-    comment: req.body.upload.comment,
-    file: req.file,
-  };
-  // let upload = Object.assign(req.body.example, {
-  //    _owner: req.currentUser._id,
-  //
+  uploader.awsUpload( req.file.buffer )
+  .then((response) => {
+    // return  Object.assign({
+    return {
+      comment: req.body.upload.comment,
+      location: response.Location,
+    };
+  })
+  .then((upload) => {
+    return Upload.create(upload);
+  })
+  .then (upload => res.json({ upload}))
+  .catch(err => next(err));
   // });
-    res.json({ upload });
+  // res.json({ upload });
   // Upload.create(upload)
   //   .then(upload => res.json({ upload }))
   //   .catch(err => next(err));
